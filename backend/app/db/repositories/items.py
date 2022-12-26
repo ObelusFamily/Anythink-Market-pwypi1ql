@@ -9,6 +9,7 @@ from app.db.queries.tables import (
     Parameter,
     items,
     items_to_tags,
+    items_to_title,
     favorites,
     tags as tags_table,
     users,
@@ -103,6 +104,7 @@ class ItemsRepository(BaseRepository):  # noqa: WPS214
     async def filter_items(  # noqa: WPS211
         self,
         *,
+        title: Optional[str] = None,
         tag: Optional[str] = None,
         seller: Optional[str] = None,
         favorited: Optional[str] = None,
@@ -135,6 +137,28 @@ class ItemsRepository(BaseRepository):  # noqa: WPS214
                 SELLER_USERNAME_ALIAS,
             ),
         )
+
+        if title:
+            query_params.append(title + '%')
+            query_params_count += 1
+
+            # fmt: off
+            query = query.join(
+                items_to_title,
+            ).on(
+                (items.id == items_to_title.item_id) & (
+                    items_to_title.title == Query.from_(
+                        items,
+                    ).where(
+                        items.title.like(Parameter(query_params_count)),
+                    ).select(
+                        items.title,
+                    )
+                ),
+            )
+            # fmt: on
+
+
         # fmt: on
 
         if tag:
